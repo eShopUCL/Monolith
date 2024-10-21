@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eshoppublicapi
+  labels:
+    app: eshoppublicapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eshoppublicapi
+  template:
+    metadata:
+      labels:
+        app: eshoppublicapi
+    spec:
+      containers:
+      - name: eshoppublicapi
+        image: eshopregistry.azurecr.io/eshoppublicapi:latest
+        ports:
+        - containerPort: 8080 
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Docker"  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eshoppublicapi-service
+spec:
+  type: ClusterIP 
+  ports:
+    - port: 80 
+      targetPort: 8080 
+  selector:
+    app: eshoppublicapi
