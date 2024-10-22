@@ -9,19 +9,26 @@ jobs:
   deploy-to-aks:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Checkout the code
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Step 2: Install Azure CLI
       - name: Set up Azure CLI
         run: |
           curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version  # Optional: just to verify the Azure CLI is installed correctly
+          az --version  # Optional: Verifies the Azure CLI is installed correctly
 
+      # Step 3: Use the Access Token to Authenticate with Azure
       - name: Use Access Token for Azure CLI
         env:
           AZURE_ACCESS_TOKEN: ${{ secrets.AZURE_ACCESS_TOKEN }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           echo "$AZURE_ACCESS_TOKEN" > /tmp/azure_access_token
+
+          # Authenticate with Azure CLI using the manually generated access token
+          az login --identity --use-device-code --access-token $(cat /tmp/azure_access_token)
+
+          # Set the subscription explicitly
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-          az login --identity --access-token $(cat /tmp/azure_access_token)
