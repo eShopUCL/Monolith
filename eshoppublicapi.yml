@@ -21,14 +21,14 @@ spec:
         - containerPort: 8080 
         env:
         - name: ASPNETCORE_ENVIRONMENT
-          value: "Docker"  
+          value: "Development"  
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: eshoppublicapi-service
 spec:
-  type: ClusterIP 
+  type: NodePort 
   ports:
     - port: 80 
       targetPort: 8080 

@@ -22,12 +22,14 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddConsole();
 
-if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Docker"){
-    // Configure SQL Server (local)
+// Configure services for SQL Server (local, Docker, or AKS)
+if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName == "Docker" || builder.Environment.EnvironmentName == "AKS")
+{
     Microsoft.eShopWeb.Infrastructure.Dependencies.ConfigureServices(builder.Configuration, builder.Services);
 }
-else{
-    // Configure SQL Server (prod)
+else
+{
+    // Configure for production, using Azure Key Vault for secrets
     var credential = new ChainedTokenCredential(new AzureDeveloperCliCredential(), new DefaultAzureCredential());
     builder.Configuration.AddAzureKeyVault(new Uri(builder.Configuration["AZURE_KEY_VAULT_ENDPOINT"] ?? ""), credential);
     builder.Services.AddDbContext<CatalogContext>(c =>
@@ -53,9 +55,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-           .AddDefaultUI()
-           .AddEntityFrameworkStores<AppIdentityDbContext>()
-                           .AddDefaultTokenProviders();
+    .AddDefaultUI()
+    .AddEntityFrameworkStores<AppIdentityDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<ITokenClaimsService, IdentityTokenClaimService>();
 builder.Configuration.AddEnvironmentVariables();
@@ -67,24 +69,21 @@ builder.Services.AddMemoryCache();
 builder.Services.AddRouting(options =>
 {
     // Replace the type and the name used to refer to it with your own
-    // IOutboundParameterTransformer implementation
     options.ConstraintMap["slugify"] = typeof(SlugifyParameterTransformer);
 });
 
 builder.Services.AddMvc(options =>
 {
-    options.Conventions.Add(new RouteTokenTransformerConvention(
-             new SlugifyParameterTransformer()));
-
+    options.Conventions.Add(new RouteTokenTransformerConvention(new SlugifyParameterTransformer()));
 });
+
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizePage("/Basket/Checkout");
 });
 builder.Services.AddHttpContextAccessor();
-builder.Services
-    .AddHealthChecks()
+builder.Services.AddHealthChecks()
     .AddCheck<ApiHealthCheck>("api_health_check", tags: new[] { "apiHealthCheck" })
     .AddCheck<HomePageHealthCheck>("home_page_health_check", tags: new[] { "homePageHealthCheck" });
 builder.Services.Configure<ServiceConfig>(config =>
@@ -93,7 +92,7 @@ builder.Services.Configure<ServiceConfig>(config =>
     config.Path = "/allservices";
 });
 
-// blazor configuration
+// Blazor configuration
 var configSection = builder.Configuration.GetRequiredSection(BaseUrlConfiguration.CONFIG_NAME);
 builder.Services.Configure<BaseUrlConfiguration>(configSection);
 var baseUrlConfig = configSection.Get<BaseUrlConfiguration>();
@@ -104,7 +103,7 @@ builder.Services.AddScoped<HttpClient>(s => new HttpClient
     BaseAddress = new Uri(baseUrlConfig!.WebBase)
 });
 
-// add blazor services
+// Add Blazor services
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddScoped<ToastService>();
@@ -116,7 +115,6 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 var app = builder.Build();
 
 app.Logger.LogInformation("App created...");
-
 app.Logger.LogInformation("Seeding Database...");
 
 using (var scope = app.Services.CreateScope())
@@ -148,25 +146,27 @@ if (!string.IsNullOrEmpty(catalogBaseUrl))
     });
 }
 
-app.UseHealthChecks("/health",
-    new HealthCheckOptions
+// Middleware and pipeline configuration
+app.UseHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
     {
-        ResponseWriter = async (context, report) =>
+        var result = new
         {
-            var result = new
+            status = report.Status.ToString(),
+            errors = report.Entries.Select(e => new
             {
-                status = report.Status.ToString(),
-                errors = report.Entries.Select(e => new
-                {
-                    key = e.Key,
-                    value = Enum.GetName(typeof(HealthStatus), e.Value.Status)
-                })
-            }.ToJson();
-            context.Response.ContentType = MediaTypeNames.Application.Json;
-            await context.Response.WriteAsync(result);
-        }
-    });
-if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker")
+                key = e.Key,
+                value = Enum.GetName(typeof(HealthStatus), e.Value.Status)
+            })
+        }.ToJson();
+        context.Response.ContentType = MediaTypeNames.Application.Json;
+        await context.Response.WriteAsync(result);
+    }
+});
+
+// Add environment-specific middleware
+if (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "Docker" || app.Environment.EnvironmentName == "AKS")
 {
     app.Logger.LogInformation("Adding Development middleware...");
     app.UseDeveloperExceptionPage();
@@ -181,6 +181,7 @@ else
     app.UseHsts();
 }
 
+// Configure remaining middleware and routing
 app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
@@ -190,12 +191,11 @@ app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
 app.MapControllerRoute("default", "{controller:slugify=Home}/{action:slugify=Index}/{id?}");
 app.MapRazorPages();
 app.MapHealthChecks("home_page_health_check", new HealthCheckOptions { Predicate = check => check.Tags.Contains("homePageHealthCheck") });
 app.MapHealthChecks("api_health_check", new HealthCheckOptions { Predicate = check => check.Tags.Contains("apiHealthCheck") });
-//endpoints.MapBlazorHub("/admin");
+// Map Blazor fallback
 app.MapFallbackToFile("index.html");
 
 app.Logger.LogInformation("LAUNCHING");
