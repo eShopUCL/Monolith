@@ -1,0 +1,38 @@
+name: CI - Build and Test
+
+# Run workflow on every push to 'main' or on pull requests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Check out the code from your repository
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Step 2: Set up .NET environment
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: '7.x' # Or the version you need for your solution
+
+    # Step 3: Restore NuGet dependencies
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Step 4: Build the solution
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
+    # Step 5: Run all test projects
+    - name: Run tests
+      run: |
+        dotnet test --no-build --configuration Release --logger "trx;LogFileName=test_results.trx"
