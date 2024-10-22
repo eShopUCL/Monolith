@@ -28,13 +28,13 @@ jobs:
         run: dotnet build Everything.sln --no-restore --configuration Release
 
       - name: Run Unit Tests
-        run: dotnet test tests/UnitTests/UnitTests.csproj --no-build --verbosity normal
+        run: dotnet test tests/UnitTests/UnitTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Run Functional Tests
-        run: dotnet test tests/FunctionalTests/FunctionalTests.csproj --no-build --verbosity normal
+        run: dotnet test tests/FunctionalTests/FunctionalTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Run Integration Tests
-        run: dotnet test tests/IntegrationTests/IntegrationTests.csproj --no-build --verbosity normal
+        run: dotnet test tests/IntegrationTests/IntegrationTests.csproj --no-build --configuration Release --verbosity normal
 
       - name: Run Public API Integration Tests
-        run: dotnet test tests/PublicApiIntegrationTests/PublicApiIntegrationTests.csproj --no-build --verbosity normal
+        run: dotnet test tests/PublicApiIntegrationTests/PublicApiIntegrationTests.csproj --no-build --configuration Release --verbosity normal
