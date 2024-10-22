@@ -38,8 +38,14 @@ jobs:
 
           echo "Access token obtained successfully."
 
-          # Use the Azure access token to authenticate
-          echo "Authenticating using access token and setting the active subscription..."
+          # Use the Azure REST API to authenticate by calling a simple API endpoint to confirm the access token is working
+          echo "Authenticating using access token..."
+          az rest --method GET \
+            --url "https://management.azure.com/subscriptions?api-version=2021-01-01" \
+            --headers "Authorization=Bearer $ACCESS_TOKEN"
+
+          # Set the subscription after validating authentication
+          echo "Setting subscription..."
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
           # Verify the current subscriptions to debug
