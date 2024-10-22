@@ -6,7 +6,6 @@
 RESOURCE_GROUP="eShopResourceGroup"
 AKS_CLUSTER_NAME="eShopCluster"
 
-#Test
 # Stop AKS Cluster
 echo "Stopping AKS Cluster..."
 az aks stop --name $AKS_CLUSTER_NAME --resource-group $RESOURCE_GROUP

@@ -12,9 +12,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Azure CLI Login
+      - name: Setup Azure CLI
+        uses: azure/CLI@v1
+        with:
+          version: 2.54.0
+
+      - name: Use Access Token for Azure CLI
         env:
-          AZURE_USERNAME: ${{ secrets.AZURE_USERNAME }}
-          AZURE_PASSWORD: ${{ secrets.AZURE_PASSWORD }}
+          AZURE_ACCESS_TOKEN: ${{ secrets.AZURE_ACCESS_TOKEN }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
-          az login -u $AZURE_USERNAME -p $AZURE_PASSWORD
+          echo "$AZURE_ACCESS_TOKEN" > /tmp/azure_access_token
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+          az login --identity --access-token $(cat /tmp/azure_access_token)
