@@ -52,7 +52,7 @@ metadata:
   labels:
     app: sqlserver
 spec:
-  type: ClusterIP  # Exposes the service internally within the cluster
+  type: LoadBalancer  # Exposes the service internally within the cluster
   ports:
     - port: 1433
       targetPort: 1433
