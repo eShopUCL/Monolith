@@ -14,44 +14,58 @@ jobs:
 
       - name: Set up Azure CLI
         run: |
-          # Install Azure CLI on Ubuntu runner
+          echo "Installing Azure CLI..."
           curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-          az --version  # Optional: just to verify that Azure CLI is installed correctly
+          az --version  # Optional: just to verify Azure CLI is installed correctly
 
-      - name: Authenticate to Azure using Access Token
+      - name: Authenticate and Set Subscription
         env:
           AZURE_ACCESS_TOKEN: ${{ secrets.AZURE_ACCESS_TOKEN }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         run: |
-          # Save the access token temporarily
+          echo "Starting authentication using Azure Access Token..."
+
+          # Save the access token temporarily for easier handling
           echo "$AZURE_ACCESS_TOKEN" > /tmp/azure_access_token
-
-          # Set the subscription explicitly
-          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-
-          # Authenticate using the access token
           ACCESS_TOKEN=$(cat /tmp/azure_access_token)
 
-          # Set up access with the token
+          # Check if access token is empty
+          if [ -z "$ACCESS_TOKEN" ]; then
+            echo "ERROR: Access token is empty. Exiting..."
+            exit 1
+          fi
+
+          echo "Access token obtained successfully."
+
+          # Authenticate to Azure using REST command (instead of az login directly, since az login doesn't accept access tokens directly)
+          echo "Authenticating using access token..."
           az rest --method POST \
-                  --url "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.ContainerService/managedClusters/eShopCluster/listClusterAdminCredential?api-version=2022-03-01" \
-                  --headers "Authorization=Bearer $ACCESS_TOKEN"
+            --url "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.ContainerService/managedClusters?api-version=2022-03-01" \
+            --headers "Authorization=Bearer $ACCESS_TOKEN"
+
+          # Set the subscription
+          echo "Setting subscription..."
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+
+          # Show all subscriptions for debugging
+          echo "Current subscriptions:"
+          az account list --output table
+
+          # Show active subscription
+          echo "Active subscription:"
+          az account show --subscription "$AZURE_SUBSCRIPTION_ID"
 
       - name: Get AKS Credentials
         env:
           AZURE_ACCESS_TOKEN: ${{ secrets.AZURE_ACCESS_TOKEN }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
-          # Use the access token to obtain the AKS credentials
+          echo "Getting AKS credentials..."
           ACCESS_TOKEN=$(cat /tmp/azure_access_token)
-          az aks get-credentials --resource-group eShopResourceGroup --name eShopCluster --admin --overwrite-existing
-          
-          # Optionally verify that credentials were set correctly by listing cluster nodes
-          az aks list -o table
+          az aks get-credentials --resource-group eShopResourceGroup --name eShopCluster --admin --overwrite-existing --subscription "$AZURE_SUBSCRIPTION_ID"
 
-      # Example deployment step to deploy the application
-      # Uncomment this block to actually deploy resources
-      # - name: Deploy to AKS
-      #   run: |
-      #     kubectl apply -f deployment.yaml
+          # Debugging: List current Kubernetes context
+          echo "Current Kubernetes contexts:"
+          kubectl config get-contexts
 
