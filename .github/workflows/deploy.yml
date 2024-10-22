@@ -38,21 +38,15 @@ jobs:
 
           echo "Access token obtained successfully."
 
-          # Authenticate to Azure using REST command (instead of az login directly, since az login doesn't accept access tokens directly)
-          echo "Authenticating using access token..."
-          az rest --method POST \
-            --url "https://management.azure.com/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.ContainerService/managedClusters?api-version=2022-03-01" \
-            --headers "Authorization=Bearer $ACCESS_TOKEN"
-
-          # Set the subscription
-          echo "Setting subscription..."
+          # Use the Azure access token to authenticate
+          echo "Authenticating using access token and setting the active subscription..."
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
-          # Show all subscriptions for debugging
+          # Verify the current subscriptions to debug
           echo "Current subscriptions:"
           az account list --output table
 
-          # Show active subscription
+          # Show the active subscription to confirm we're in the right one
           echo "Active subscription:"
           az account show --subscription "$AZURE_SUBSCRIPTION_ID"
 
@@ -68,4 +62,3 @@ jobs:
           # Debugging: List current Kubernetes context
           echo "Current Kubernetes contexts:"
           kubectl config get-contexts
-
