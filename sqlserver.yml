@@ -28,7 +28,7 @@ spec:
         - name: sqlstorage
           mountPath: /var/opt/mssql
         securityContext:
-          runAsUser: 0  # Run as root user
+          runAsUser: 0  # Run as root user to bypass security restrictions
       volumes:
       - name: sqlstorage
         persistentVolumeClaim:
@@ -52,7 +52,7 @@ metadata:
   labels:
     app: sqlserver
 spec:
-  type: LoadBalancer  # Exposes the service internally within the cluster
+  type: LoadBalancer
   ports:
     - port: 1433
       targetPort: 1433
