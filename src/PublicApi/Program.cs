@@ -155,6 +155,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseMiddleware<ExceptionMiddleware>();
 
+app.UsePathBase("/eshoppublicapi");
+
 app.UseHttpsRedirection();
 
 app.UseRouting();
@@ -170,7 +172,8 @@ app.UseSwagger();
 // specifying the Swagger JSON endpoint.
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+    c.SwaggerEndpoint("/eshoppublicapi/swagger/v1/swagger.json", "My API V1");
+    c.RoutePrefix = "swagger";
 });
 
 app.MapControllers();

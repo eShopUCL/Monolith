@@ -18,7 +18,7 @@ spec:
       - name: eshopwebmvc
         image: eshopregistry.azurecr.io/eshopwebmvc:latest
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: "Development" 
@@ -28,7 +28,7 @@ kind: Service
 metadata:
   name: eshopwebmvc-service
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
     - port: 80
       targetPort: 8080

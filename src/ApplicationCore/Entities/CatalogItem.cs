@@ -60,7 +60,7 @@ public class CatalogItem : BaseEntity, IAggregateRoot
             PictureUri = string.Empty;
             return;
         }
-        PictureUri = $"images\\products\\{pictureName}?{new DateTime().Ticks}";
+        PictureUri = $"images/products/{pictureName}?{DateTime.UtcNow.Ticks}";
     }
 
     public readonly record struct CatalogItemDetails
