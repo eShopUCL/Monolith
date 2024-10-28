@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eshop-ingress
+  namespace: default
+spec:
+  ingressClassName: traefik
+  rules:
+  - http:
+      paths:
+      - path: /eshopwebmvc
+        pathType: Prefix
+        backend:
+          service:
+            name: eshopwebmvc-service
+            port:
+              number: 80
+      - path: /eshoppublicapi
+        pathType: Prefix
+        backend:
+          service:
+            name: eshoppublicapi-service
+            port:
+              number: 80
