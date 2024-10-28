@@ -114,6 +114,8 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 var app = builder.Build();
 
+app.UsePathBase("/eshopwebmvc");
+
 app.Logger.LogInformation("App created...");
 app.Logger.LogInformation("Seeding Database...");
 
@@ -136,15 +138,15 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-var catalogBaseUrl = builder.Configuration.GetValue(typeof(string), "CatalogBaseUrl") as string;
-if (!string.IsNullOrEmpty(catalogBaseUrl))
-{
-    app.Use((context, next) =>
-    {
-        context.Request.PathBase = new PathString(catalogBaseUrl);
-        return next();
-    });
-}
+// var catalogBaseUrl = builder.Configuration.GetValue(typeof(string), "CatalogBaseUrl") as string;
+// if (!string.IsNullOrEmpty(catalogBaseUrl))
+// {
+//     app.Use((context, next) =>
+//     {
+//         context.Request.PathBase = new PathString(catalogBaseUrl);
+//         return next();
+//     });
+// }
 
 // Middleware and pipeline configuration
 app.UseHealthChecks("/health", new HealthCheckOptions
@@ -182,7 +184,7 @@ else
 }
 
 // Configure remaining middleware and routing
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 app.UseRouting();

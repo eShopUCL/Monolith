@@ -9,7 +9,13 @@ public class UriComposer : IUriComposer
     public UriComposer(CatalogSettings catalogSettings) => _catalogSettings = catalogSettings;
 
     public string ComposePicUri(string uriTemplate)
+{
+    if (string.IsNullOrEmpty(uriTemplate))
     {
-        return uriTemplate.Replace("http://catalogbaseurltobereplaced", _catalogSettings.CatalogBaseUrl);
+        return string.Empty;
     }
+
+    // Replace the placeholder with the actual base URL including the base path
+    return uriTemplate.Replace("http://catalogbaseurltobereplaced", "http://4.207.200.245/eshopwebmvc");
+}
 }
