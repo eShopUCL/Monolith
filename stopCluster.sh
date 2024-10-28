@@ -10,14 +10,4 @@ AKS_CLUSTER_NAME="eShopCluster"
 echo "Stopping AKS Cluster..."
 az aks stop --name $AKS_CLUSTER_NAME --resource-group $RESOURCE_GROUP
 
-# Delete Load Balancers
-echo "Deleting Load Balancers..."
-LOAD_BALANCERS=$(az network lb list --resource-group $RESOURCE_GROUP --query "[].name" -o tsv)
-
-for LB in $LOAD_BALANCERS; do
-  echo "Deleting load balancer: $LB"
-  az network lb delete --name $LB --resource-group $RESOURCE_GROUP
-  echo "Deleted load balancer: $LB"
-done
-
-echo "AKS Cluster is stopped and load balancers are deleted."
+echo "AKS Cluster is stopped"
