@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Stop Script - stop_aks.sh
-# This script will stop the AKS cluster and delete load balancers to minimize costs.
+# This script will stop the AKS cluster
 
 RESOURCE_GROUP="eShopResourceGroup"
 AKS_CLUSTER_NAME="eShopCluster"
