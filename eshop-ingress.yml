@@ -22,3 +22,10 @@ spec:
             name: eshoppublicapi-service
             port:
               number: 80
+      - path: /catalogservice
+        pathType: Prefix
+        backend:
+          service:
+            name: catalogservice-service
+            port:
+              number: 80
