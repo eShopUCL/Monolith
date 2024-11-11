@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BlazorShared.Interfaces;
 using BlazorShared.Models;
 using Microsoft.Extensions.Logging;
+using System;
 
 
 namespace BlazorAdmin.Services;
@@ -32,7 +33,7 @@ public class CatalogItemService : ICatalogItemService
     public async Task<CatalogItem> Create(CreateCatalogItemRequest catalogItem)
     {
         var httpClient = new HttpClient();
-        var url = "http://localhost:5229/api/catalog-items/";
+        var url = "http://localhost:5229/api/catalog/items/";
 
         // Serialize the catalogItem to JSON
         var jsonContent = new StringContent(
@@ -78,40 +79,11 @@ public class CatalogItemService : ICatalogItemService
     }
 
     public async Task<List<CatalogItem>> ListPaged(int pageSize)
-{
-    _logger.LogInformation($"Fetching catalog items from API with PageSize={pageSize}.");
-
-    var httpClient = new HttpClient();
-    var url = $"http://localhost:5229/api/catalog-items?PageSize={pageSize}";
-
-    // Send the GET request
-    var response = await httpClient.GetAsync(url);
-
-    // Ensure the request was successful
-    response.EnsureSuccessStatusCode();
-
-    // Deserialize the response content
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-    var brands = await _brandService.List();
-    var types = await _typeService.List();
-    var items = pagedResponse.CatalogItems;
-
-    foreach (var item in items)
     {
-        item.CatalogBrand = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
-        item.CatalogType = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
-    }
+        _logger.LogInformation($"Fetching catalog items from API with PageSize={pageSize}.");
 
-    return items;
-}
-
-    public async Task<List<CatalogItem>> List()
-    {
-        _logger.LogInformation("Fetching catalog items from API.");
         var httpClient = new HttpClient();
-        var url = "http://localhost:5229/api/catalog-items";
+        var url = $"http://localhost:5229/api/catalog/items?PageSize={pageSize}";
 
         // Send the GET request
         var response = await httpClient.GetAsync(url);
@@ -135,4 +107,77 @@ public class CatalogItemService : ICatalogItemService
 
         return items;
     }
+
+    public async Task<List<CatalogItem>> List()
+{
+    _logger.LogInformation("Fetching catalog items from API.");
+    var httpClient = new HttpClient();
+    var url = "http://localhost:5229/api/catalog/items";
+
+    // Send the GET request
+    var response = await httpClient.GetAsync(url);
+
+    // Ensure the request was successful
+    response.EnsureSuccessStatusCode();
+
+    // Deserialize the response content
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+    Console.WriteLine("Catalog Items fetched from API:");
+    foreach (var item in pagedResponse.CatalogItems)
+    {
+        Console.WriteLine($"- ID: {item.Id}, Name: {item.Name}, Brand ID: {item.CatalogBrandId}, Type ID: {item.CatalogTypeId}");
+    }
+
+    var brands = await _brandService.List();
+    Console.WriteLine("Catalog Brands fetched:");
+    foreach (var brand in brands)
+    {
+        Console.WriteLine($"- Brand ID: {brand.Id}, Name: {brand.Name}");
+    }
+
+    var types = await _typeService.List();
+    Console.WriteLine("Catalog Types fetched:");
+    foreach (var type in types)
+    {
+        Console.WriteLine($"- Type ID: {type.Id}, Name: {type.Name}");
+    }
+
+    var items = pagedResponse.CatalogItems;
+
+    Console.WriteLine("Mapping Catalog Items with Brands and Types:");
+    foreach (var item in items)
+    {
+        // Attempt to find matching brand and type names
+        var brandName = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
+        var typeName = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
+
+        // Log each match or missing entry
+        if (brandName != null)
+        {
+            Console.WriteLine($"- Item ID: {item.Id}, Brand Matched: {brandName}");
+        }
+        else
+        {
+            Console.WriteLine($"- Item ID: {item.Id}, Brand not found for Brand ID: {item.CatalogBrandId}");
+        }
+
+        if (typeName != null)
+        {
+            Console.WriteLine($"- Item ID: {item.Id}, Type Matched: {typeName}");
+        }
+        else
+        {
+            Console.WriteLine($"- Item ID: {item.Id}, Type not found for Type ID: {item.CatalogTypeId}");
+        }
+
+        // Assign the names to the item
+        item.CatalogBrand = brandName;
+        item.CatalogType = typeName;
+    }
+
+    return items;
+}
+
 }

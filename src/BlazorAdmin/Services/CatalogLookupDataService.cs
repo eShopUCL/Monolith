@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -34,10 +35,35 @@ public class CatalogLookupDataService<TLookupData, TReponse>
 
     public async Task<List<TLookupData>> List()
     {
-        var endpointName = typeof(TLookupData).GetCustomAttribute<EndpointAttribute>().Name;
-        _logger.LogInformation($"Fetching {typeof(TLookupData).Name} from API. Enpoint : {endpointName}");
+        string url;
 
-        var response = await _httpClient.GetFromJsonAsync<TReponse>($"{_apiUrl}{endpointName}");
+        // Speciel lookup til både catalogbrands og catalogtype, da det på nuværende tidspunkt er de eneste vi har 'stranglet' ud af monolitten.
+        if (typeof(TLookupData) == typeof(CatalogBrand))
+        {
+            url = "http://localhost:5229/api/catalog/catalogbrands"; // Scuffed løsning, da vi fortsat bruger _apiUrl til andre dele af monolitten.
+        }
+        else if (typeof(TLookupData) == typeof(CatalogType))
+        {
+            url = "http://localhost:5229/api/catalog/catalogtypes"; // Scuffed løsning, da vi fortsat bruger _apiUrl til andre dele af monolitten.
+        }
+        else
+        {
+            // For other types, build the URL dynamically as before
+            var endpointName = typeof(TLookupData).GetCustomAttribute<EndpointAttribute>().Name;
+            url = $"{_apiUrl}{endpointName}";
+        }
+
+        _logger.LogInformation($"Fetching {typeof(TLookupData).Name} from API. Endpoint: {url}");
+
+
+        // Fetch data from the resolved URL
+        var response = await _httpClient.GetFromJsonAsync<TReponse>(url);
+
+        Console.WriteLine($"Fetched {typeof(TLookupData).Name} List:");
+        foreach (var item in response.List)
+        {
+            Console.WriteLine(item); // Assuming item.ToString() provides useful output
+        }
         return response.List;
     }
 }
