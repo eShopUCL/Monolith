@@ -78,40 +78,61 @@ public class CatalogItemService : ICatalogItemService
     }
 
     public async Task<List<CatalogItem>> ListPaged(int pageSize)
-    {
-        _logger.LogInformation("Fetching catalog items from API.");
+{
+    _logger.LogInformation($"Fetching catalog items from API with PageSize={pageSize}.");
 
-        var brandListTask = _brandService.List();
-        var typeListTask = _typeService.List();
-        var itemListTask = _httpService.HttpGet<PagedCatalogItemResponse>($"catalog-items?PageSize=10");
-        await Task.WhenAll(brandListTask, typeListTask, itemListTask);
-        var brands = brandListTask.Result;
-        var types = typeListTask.Result;
-        var items = itemListTask.Result.CatalogItems;
-        foreach (var item in items)
-        {
-            item.CatalogBrand = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
-            item.CatalogType = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
-        }
-        return items;
+    var httpClient = new HttpClient();
+    var url = $"http://localhost:5229/api/catalog-items?PageSize={pageSize}";
+
+    // Send the GET request
+    var response = await httpClient.GetAsync(url);
+
+    // Ensure the request was successful
+    response.EnsureSuccessStatusCode();
+
+    // Deserialize the response content
+    var responseContent = await response.Content.ReadAsStringAsync();
+    var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+    var brands = await _brandService.List();
+    var types = await _typeService.List();
+    var items = pagedResponse.CatalogItems;
+
+    foreach (var item in items)
+    {
+        item.CatalogBrand = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
+        item.CatalogType = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
     }
+
+    return items;
+}
 
     public async Task<List<CatalogItem>> List()
     {
         _logger.LogInformation("Fetching catalog items from API.");
+        var httpClient = new HttpClient();
+        var url = "http://localhost:5229/api/catalog-items";
 
-        var brandListTask = _brandService.List();
-        var typeListTask = _typeService.List();
-        var itemListTask = _httpService.HttpGet<PagedCatalogItemResponse>($"catalog-items");
-        await Task.WhenAll(brandListTask, typeListTask, itemListTask);
-        var brands = brandListTask.Result;
-        var types = typeListTask.Result;
-        var items = itemListTask.Result.CatalogItems;
+        // Send the GET request
+        var response = await httpClient.GetAsync(url);
+
+        // Ensure the request was successful
+        response.EnsureSuccessStatusCode();
+
+        // Deserialize the response content
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        var brands = await _brandService.List();
+        var types = await _typeService.List();
+        var items = pagedResponse.CatalogItems;
+
         foreach (var item in items)
         {
             item.CatalogBrand = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
             item.CatalogType = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
         }
+
         return items;
     }
 }
