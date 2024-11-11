@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text;
 using System.Threading.Tasks;
 using BlazorShared.Interfaces;
 using BlazorShared.Models;
@@ -28,8 +31,26 @@ public class CatalogItemService : ICatalogItemService
 
     public async Task<CatalogItem> Create(CreateCatalogItemRequest catalogItem)
     {
-        var response = await _httpService.HttpPost<CreateCatalogItemResponse>("catalog-items", catalogItem);
-        return response?.CatalogItem;
+        var httpClient = new HttpClient();
+        var url = "http://localhost:5229/api/catalog-items/";
+
+        // Serialize the catalogItem to JSON
+        var jsonContent = new StringContent(
+            JsonSerializer.Serialize(catalogItem),
+            Encoding.UTF8,
+            "application/json");
+
+        // Send the POST request
+        var response = await httpClient.PostAsync(url, jsonContent);
+
+        // Ensure the request was successful
+        response.EnsureSuccessStatusCode();
+
+        // Deserialize the response content to a CatalogItem
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var createdItem = JsonSerializer.Deserialize<CatalogItem>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        return createdItem;
     }
 
     public async Task<CatalogItem> Edit(CatalogItem catalogItem)

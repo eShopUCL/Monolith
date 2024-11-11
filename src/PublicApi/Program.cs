@@ -76,14 +76,13 @@ builder.Services.AddCors(options =>
         corsPolicyBuilder =>
         {
             corsPolicyBuilder
-                .AllowAnyOrigin()  
-                .AllowAnyMethod()   
-                .AllowAnyHeader();  
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
         });
 });
 
 builder.Services.AddControllers();
-builder.Services.AddAutoMapper(typeof(MappingProfile).Assembly);
 builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -134,8 +133,6 @@ using (var scope = app.Services.CreateScope())
     var scopedProvider = scope.ServiceProvider;
     try
     {
-        var catalogContext = scopedProvider.GetRequiredService<CatalogContext>();
-        await CatalogContextSeed.SeedAsync(catalogContext, app.Logger);
 
         var userManager = scopedProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scopedProvider.GetRequiredService<RoleManager<IdentityRole>>();

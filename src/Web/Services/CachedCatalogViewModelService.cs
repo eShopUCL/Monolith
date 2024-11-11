@@ -37,6 +37,8 @@ public class CachedCatalogViewModelService : ICatalogViewModelService
             entry.SlidingExpiration = CacheHelpers.DefaultCacheDuration;
             return await _catalogViewModelService.GetCatalogItems(pageIndex, itemsPage, brandId, typeId);
         })) ?? new CatalogIndexViewModel();
+
+
     }
 
     public async Task<IEnumerable<SelectListItem>> GetTypes()
