@@ -19,11 +19,24 @@ public class CatalogItemService : ICatalogItemService
     private readonly HttpService _httpService;
     private readonly ILogger<CatalogItemService> _logger;
 
+    // Benytter et nyt HttpClient objekt, da HttpService stadig skal
+    // Benytte det gamle URL til at hente andet data, som f.eks
+    // Orders, identity, osv. Det går nok lidt imod de forudsatte principper
+    // I fht. Clean code og performance, men det er lettere indtil vi har resten
+    // af vores microservices oppe at køre
+    private readonly HttpClient _httpClient = new HttpClient();
+    
+    // Vi hardcoder også vores baseUrl for nu, men i fremtiden
+    // skal vi benytte vores API Gateway, så det bliver mere Dynamisk :)
+    private const string _baseUrl = "http://localhost:5229/api/catalog/items";
+
     public CatalogItemService(ICatalogLookupDataService<CatalogBrand> brandService,
         ICatalogLookupDataService<CatalogType> typeService,
         HttpService httpService,
+        HttpClient httpClient,
         ILogger<CatalogItemService> logger)
     {
+        _httpClient = httpClient;
         _brandService = brandService;
         _typeService = typeService;
         _httpService = httpService;
@@ -32,38 +45,39 @@ public class CatalogItemService : ICatalogItemService
 
     public async Task<CatalogItem> Create(CreateCatalogItemRequest catalogItem)
     {
-        var httpClient = new HttpClient();
-        var url = "http://localhost:5229/api/catalog/items/";
+        var url = $"{_baseUrl}/";
 
-        // Serialize the catalogItem to JSON
+        // Serializer indtastet catalogItem til json
         var jsonContent = new StringContent(
             JsonSerializer.Serialize(catalogItem),
             Encoding.UTF8,
             "application/json");
 
-        // Send the POST request
-        var response = await httpClient.PostAsync(url, jsonContent);
-
-        // Ensure the request was successful
+        // Sender get request med httpclient
+        // Og tjekker om der er fejl
+        var response = await _httpClient.PostAsync(url, jsonContent);
         response.EnsureSuccessStatusCode();
 
-        // Deserialize the response content to a CatalogItem
+        // Deserialize til et CatalogItem objekt
         var responseContent = await response.Content.ReadAsStringAsync();
         var createdItem = JsonSerializer.Deserialize<CatalogItem>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         return createdItem;
     }
 
+    //TODO: Implementer Edit metoden
     public async Task<CatalogItem> Edit(CatalogItem catalogItem)
     {
         return (await _httpService.HttpPut<EditCatalogItemResult>("catalog-items", catalogItem)).CatalogItem;
     }
 
+    //TODO: Implementer Delete metoden
     public async Task<string> Delete(int catalogItemId)
     {
         return (await _httpService.HttpDelete<DeleteCatalogItemResponse>("catalog-items", catalogItemId)).Status;
     }
 
+    //TODO: Implementer GetById metoden
     public async Task<CatalogItem> GetById(int id)
     {
         var brandListTask = _brandService.List();
@@ -80,104 +94,42 @@ public class CatalogItemService : ICatalogItemService
 
     public async Task<List<CatalogItem>> ListPaged(int pageSize)
     {
-        _logger.LogInformation($"Fetching catalog items from API with PageSize={pageSize}.");
+        // Opret det URL vi skal bruge med vores baseUrl + variabel
+        var url = $"{_baseUrl}?PageSize={pageSize}";
 
-        var httpClient = new HttpClient();
-        var url = $"http://localhost:5229/api/catalog/items?PageSize={pageSize}";
 
-        // Send the GET request
-        var response = await httpClient.GetAsync(url);
-
-        // Ensure the request was successful
+        // Sender get request med httpclient
+        // Og tjekker om der er fejl
+        var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
 
-        // Deserialize the response content
+        // Deserialize til et PagedCatalogItemResponse objekt
         var responseContent = await response.Content.ReadAsStringAsync();
         var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        var brands = await _brandService.List();
-        var types = await _typeService.List();
         var items = pagedResponse.CatalogItems;
-
-        foreach (var item in items)
-        {
-            item.CatalogBrand = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
-            item.CatalogType = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
-        }
 
         return items;
     }
 
     public async Task<List<CatalogItem>> List()
-{
-    _logger.LogInformation("Fetching catalog items from API.");
-    var httpClient = new HttpClient();
-    var url = "http://localhost:5229/api/catalog/items";
-
-    // Send the GET request
-    var response = await httpClient.GetAsync(url);
-
-    // Ensure the request was successful
-    response.EnsureSuccessStatusCode();
-
-    // Deserialize the response content
-    var responseContent = await response.Content.ReadAsStringAsync();
-    var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-    Console.WriteLine("Catalog Items fetched from API:");
-    foreach (var item in pagedResponse.CatalogItems)
     {
-        Console.WriteLine($"- ID: {item.Id}, Name: {item.Name}, Brand ID: {item.CatalogBrandId}, Type ID: {item.CatalogTypeId}");
+        // Vi hardcoder pagesize for nu
+        // TODO: Get-all endpoint i fremtiden
+        const int pageSize = 12;
+
+        // Opret det URL vi skal bruge med vores baseUrl + variabel
+        var url = $"{_baseUrl}?PageSize={pageSize}";
+
+        // Send get request med httpclient
+        var response = await _httpClient.GetAsync(url);
+        response.EnsureSuccessStatusCode();
+
+        // Deserialize til et PagedCatalogItemResponse objekt
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var items = pagedResponse.CatalogItems;
+
+        return items;
     }
-
-    var brands = await _brandService.List();
-    Console.WriteLine("Catalog Brands fetched:");
-    foreach (var brand in brands)
-    {
-        Console.WriteLine($"- Brand ID: {brand.Id}, Name: {brand.Name}");
-    }
-
-    var types = await _typeService.List();
-    Console.WriteLine("Catalog Types fetched:");
-    foreach (var type in types)
-    {
-        Console.WriteLine($"- Type ID: {type.Id}, Name: {type.Name}");
-    }
-
-    var items = pagedResponse.CatalogItems;
-
-    Console.WriteLine("Mapping Catalog Items with Brands and Types:");
-    foreach (var item in items)
-    {
-        // Attempt to find matching brand and type names
-        var brandName = brands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
-        var typeName = types.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
-
-        // Log each match or missing entry
-        if (brandName != null)
-        {
-            Console.WriteLine($"- Item ID: {item.Id}, Brand Matched: {brandName}");
-        }
-        else
-        {
-            Console.WriteLine($"- Item ID: {item.Id}, Brand not found for Brand ID: {item.CatalogBrandId}");
-        }
-
-        if (typeName != null)
-        {
-            Console.WriteLine($"- Item ID: {item.Id}, Type Matched: {typeName}");
-        }
-        else
-        {
-            Console.WriteLine($"- Item ID: {item.Id}, Type not found for Type ID: {item.CatalogTypeId}");
-        }
-
-        // Assign the names to the item
-        item.CatalogBrand = brandName;
-        item.CatalogType = typeName;
-    }
-
-    return items;
-}
 
 }
