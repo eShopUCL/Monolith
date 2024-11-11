@@ -4,11 +4,13 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BlazorShared;
 using BlazorShared.Attributes;
 using BlazorShared.Interfaces;
 using BlazorShared.Models;
+using FluentValidation.Validators;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -23,6 +25,8 @@ public class CatalogLookupDataService<TLookupData, TReponse>
     private readonly HttpClient _httpClient;
     private readonly ILogger<CatalogLookupDataService<TLookupData, TReponse>> _logger;
     private readonly string _apiUrl;
+    private const string _baseUrl = "http://localhost:5229/api/catalog";
+
 
     public CatalogLookupDataService(HttpClient httpClient,
         IOptions<BaseUrlConfiguration> baseUrlConfiguration,
@@ -37,33 +41,32 @@ public class CatalogLookupDataService<TLookupData, TReponse>
     {
         string url;
 
-        // Speciel lookup til både catalogbrands og catalogtype, da det på nuværende tidspunkt er de eneste vi har 'stranglet' ud af monolitten.
+        // Vi tager direkte fat i CatalogBrand og CatalogType, da vi har implementeret
+        // vores CatalogService for disse, og denne har et andet URL end den oprindelige API (_baseUrl)
+        // På den måde sikrer vi, at alt det andet data fortsat hentes fra den oprindelige API (_apiUrl)
+        // I fremtiden skal vi have ændret dette url til at benytte vores API gateway (Når alle services er implementeret)
         if (typeof(TLookupData) == typeof(CatalogBrand))
         {
-            url = "http://localhost:5229/api/catalog/catalogbrands"; // Scuffed løsning, da vi fortsat bruger _apiUrl til andre dele af monolitten.
+            url = $"{_baseUrl}/catalogbrands";
         }
         else if (typeof(TLookupData) == typeof(CatalogType))
         {
-            url = "http://localhost:5229/api/catalog/catalogtypes"; // Scuffed løsning, da vi fortsat bruger _apiUrl til andre dele af monolitten.
+            url = $"{_baseUrl}/catalogbrands";
         }
         else
         {
-            // For other types, build the URL dynamically as before
             var endpointName = typeof(TLookupData).GetCustomAttribute<EndpointAttribute>().Name;
             url = $"{_apiUrl}{endpointName}";
         }
 
-        _logger.LogInformation($"Fetching {typeof(TLookupData).Name} from API. Endpoint: {url}");
-
-
-        // Fetch data from the resolved URL
-        var response = await _httpClient.GetFromJsonAsync<TReponse>(url);
-
-        Console.WriteLine($"Fetched {typeof(TLookupData).Name} List:");
-        foreach (var item in response.List)
+        // Vi deserializer til et TLookupData objekt og returnerer dette
+        var options = new JsonSerializerOptions
         {
-            Console.WriteLine(item); // Assuming item.ToString() provides useful output
-        }
-        return response.List;
+            PropertyNameCaseInsensitive = true
+        };
+        var response = await _httpClient.GetFromJsonAsync<List<TLookupData>>(url, options);
+
+        return response;
     }
+
 }
