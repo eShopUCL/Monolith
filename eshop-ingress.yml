@@ -22,10 +22,3 @@ spec:
             name: eshoppublicapi-service
             port:
               number: 80
-      - path: /rabbitmq
-        pathType: Prefix
-        backend:
-          service:
-            name: rabbitmq-management
-            port:
-              number: 15672
