@@ -25,7 +25,11 @@ public class CatalogLookupDataService<TLookupData, TReponse>
     private readonly HttpClient _httpClient;
     private readonly ILogger<CatalogLookupDataService<TLookupData, TReponse>> _logger;
     private readonly string _apiUrl;
-    private const string _baseUrl = "http://localhost:5229/api/catalog";
+
+    // Brug denne for lokal udvikling
+    //private const string _baseUrl = "http://localhost:5229/api/catalog";
+
+    private const string _baseUrl = "http://4.207.200.245/apigateway/api/catalog";
 
 
     public CatalogLookupDataService(HttpClient httpClient,

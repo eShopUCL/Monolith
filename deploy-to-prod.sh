@@ -56,4 +56,26 @@ do
   fi
 done
 
+# Step 5: Restart the Deployments to Apply Changes Immediately
+echo "Restarting deployments to ensure latest images are pulled and pods are updated..."
+for SERVICE in "${SERVICES[@]}"
+do
+  DEPLOYMENT_NAME=${SERVICE}
+  echo "Restarting deployment '${DEPLOYMENT_NAME}'..."
+  kubectl rollout restart deployment/${DEPLOYMENT_NAME}
+  echo "Deployment '${DEPLOYMENT_NAME}' restarted successfully."
+done
+
+echo "All deployments have been updated and restarted successfully!"
+
+# Optional: Check rollout status
+echo "Checking rollout status for all deployments..."
+for SERVICE in "${SERVICES[@]}"
+do
+  DEPLOYMENT_NAME=${SERVICE}
+  echo "Waiting for deployment '${DEPLOYMENT_NAME}' to finish rolling out..."
+  kubectl rollout status deployment/${DEPLOYMENT_NAME}
+  echo "Deployment '${DEPLOYMENT_NAME}' has successfully rolled out."
+done
+
 echo "Deployment completed successfully!"
