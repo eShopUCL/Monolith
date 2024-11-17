@@ -1,6 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BlazorAdmin.Helpers;
+using BlazorAdmin.Services;
 using BlazorShared.Interfaces;
 using BlazorShared.Models;
 
@@ -9,7 +13,7 @@ namespace BlazorAdmin.Pages.CatalogItemPage;
 public partial class List : BlazorComponent
 {
     [Microsoft.AspNetCore.Components.Inject]
-    public ICatalogItemService CatalogItemService { get; set; }
+    public CatalogItemService CatalogItemService { get; set; }
 
     [Microsoft.AspNetCore.Components.Inject]
     public ICatalogLookupDataService<CatalogBrand> CatalogBrandService { get; set; }
@@ -26,21 +30,28 @@ public partial class List : BlazorComponent
     private Details DetailsComponent { get; set; }
     private Create CreateComponent { get; set; }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        // Kalder .List metoden for hver Service for at hente objekterne fra
+        // vores CatalogService API.
+        catalogItems = await CatalogItemService.List();
+        catalogTypes = await CatalogTypeService.List();
+        catalogBrands = await CatalogBrandService.List();
+
+        // Her mapper vi hvert catalogItem med CatalogType og CatalogBrand navne
+        // Vi benytter os af catalogItem.catalogTypeId og catalogItem.catalogBrandId
+        // Disse benyttes til at finde navnet på typen og brandet
+        foreach (var item in catalogItems)
         {
-            catalogItems = await CatalogItemService.List();
-            catalogTypes = await CatalogTypeService.List();
-            catalogBrands = await CatalogBrandService.List();
-
-            CallRequestRefresh();
+            item.CatalogType = catalogTypes.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
+            item.CatalogBrand = catalogBrands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
         }
-
-        await base.OnAfterRenderAsync(firstRender);
+        
+        // Kalder StateHasChanged for at opdatere UI
+        StateHasChanged();
     }
 
-    private async void DetailsClick(int id)
+    private async Task DetailsClick(int id)
     {
         await DetailsComponent.Open(id);
     }
@@ -63,6 +74,14 @@ public partial class List : BlazorComponent
     private async Task ReloadCatalogItems()
     {
         catalogItems = await CatalogItemService.List();
+
+        // Map CatalogType og CatalogBrand navne igen, hvis det er blevet opdateret
+        foreach (var item in catalogItems)
+        {
+            item.CatalogType = catalogTypes.FirstOrDefault(t => t.Id == item.CatalogTypeId)?.Name;
+            item.CatalogBrand = catalogBrands.FirstOrDefault(b => b.Id == item.CatalogBrandId)?.Name;
+        }
+
         StateHasChanged();
     }
 }

@@ -19,6 +19,7 @@ public class HttpService
     {
         _httpClient = httpClient;
         _toastService = toastService;
+        // Vil blive lavet om til at benytte vores baseUrl for vores gateway når den er klar
         _apiUrl = baseUrlConfiguration.Value.ApiBase;
     }
 
