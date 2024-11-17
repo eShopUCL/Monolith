@@ -12,6 +12,7 @@ additionalArguments:
   - --metrics.prometheus.entrypoint=metrics
   - --providers.kubernetescrd
   - --providers.kubernetescrd.allowEmptyServices=true
+  - --providers.kubernetescrd.allowcrossnamespace=true
   - --providers.kubernetesingress
   - --providers.kubernetesingress.allowEmptyServices=true
   - --entryPoints.websecure.http.tls=true
@@ -19,3 +20,9 @@ additionalArguments:
 
 crds:
   enabled: true
+
+providers:
+  kubernetesIngress:
+    namespaces:
+      - "default"
+      - "rabbitmq-system" 
