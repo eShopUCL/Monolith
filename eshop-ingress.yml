@@ -29,3 +29,10 @@ spec:
             name: catalogservice-service
             port:
               number: 80
+      - path: /apigateway
+        pathType: Prefix
+        backend:
+          service:
+            name: api-gateway-service
+            port:
+              number: 80
