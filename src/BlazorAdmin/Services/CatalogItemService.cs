@@ -25,10 +25,16 @@ public class CatalogItemService : ICatalogItemService
     // I fht. Clean code og performance, men det er lettere indtil vi har resten
     // af vores microservices oppe at køre
     private readonly HttpClient _httpClient = new HttpClient();
-    
-    // Vi hardcoder også vores baseUrl for nu, men i fremtiden
-    // skal vi benytte vores API Gateway, så det bliver mere Dynamisk :)
-    private const string _baseUrl = "http://localhost:5229/api/catalog/items";
+
+    // Vi hardcoder også vores baseUrl for nu, men i fremtiden, når alle microservices er
+    // på plads, skal vi lave base url'et fra HttpService om, så det afspejler vores
+    // url for API-Gatewayen.
+
+    // Brug denne for lokal udvikling
+    //private const string _baseUrl = "http://localhost:5229/api/catalog/items";
+
+    //Brug denne for deployment til prod
+    private const string _baseUrl = "http://4.207.200.245/apigateway/api/catalog/items";
 
     public CatalogItemService(ICatalogLookupDataService<CatalogBrand> brandService,
         ICatalogLookupDataService<CatalogType> typeService,
@@ -45,8 +51,6 @@ public class CatalogItemService : ICatalogItemService
 
     public async Task<CatalogItem> Create(CreateCatalogItemRequest catalogItem)
     {
-        var url = $"{_baseUrl}/";
-
         // Serializer indtastet catalogItem til json
         var jsonContent = new StringContent(
             JsonSerializer.Serialize(catalogItem),
@@ -55,7 +59,7 @@ public class CatalogItemService : ICatalogItemService
 
         // Sender get request med httpclient
         // Og tjekker om der er fejl
-        var response = await _httpClient.PostAsync(url, jsonContent);
+        var response = await _httpClient.PostAsync(_baseUrl, jsonContent);
         response.EnsureSuccessStatusCode();
 
         // Deserialize til et CatalogItem objekt
@@ -94,13 +98,9 @@ public class CatalogItemService : ICatalogItemService
 
     public async Task<List<CatalogItem>> ListPaged(int pageSize)
     {
-        // Opret det URL vi skal bruge med vores baseUrl + variabel
-        var url = $"{_baseUrl}?PageSize={pageSize}";
-
-
         // Sender get request med httpclient
         // Og tjekker om der er fejl
-        var response = await _httpClient.GetAsync(url);
+        var response = await _httpClient.GetAsync(_baseUrl);
         response.EnsureSuccessStatusCode();
 
         // Deserialize til et PagedCatalogItemResponse objekt
@@ -113,15 +113,8 @@ public class CatalogItemService : ICatalogItemService
 
     public async Task<List<CatalogItem>> List()
     {
-        // Vi hardcoder pagesize for nu
-        // TODO: Get-all endpoint i fremtiden
-        const int pageSize = 12;
-
-        // Opret det URL vi skal bruge med vores baseUrl + variabel
-        var url = $"{_baseUrl}?PageSize={pageSize}";
-
         // Send get request med httpclient
-        var response = await _httpClient.GetAsync(url);
+        var response = await _httpClient.GetAsync(_baseUrl);
         response.EnsureSuccessStatusCode();
 
         // Deserialize til et PagedCatalogItemResponse objekt
