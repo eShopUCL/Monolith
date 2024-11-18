@@ -117,14 +117,20 @@
 
     public async Task Open(int id)
     {
-        Logger.LogInformation("Now loading... /Catalog/Delete/{Id}", id);
+        Console.WriteLine($"Opening Delete Modal for Item ID: {id}");
 
-        await new Css(JSRuntime).HideBodyOverflow();
-
+        // Hent catalog item via CatalogItemService
         _item = await CatalogItemService.GetById(id);
 
+        if (_item == null)
+        {
+            Console.WriteLine($"Item with ID {id} not found.");
+            return;
+        }
+
+        // Opdatér modal state så vi viser produktet
         _modalDisplay = "block;";
-        _modalClass = "Show";
+        _modalClass = "show";
         _showDeleteModal = true;
 
         StateHasChanged();

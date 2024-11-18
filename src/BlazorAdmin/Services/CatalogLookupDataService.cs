@@ -55,7 +55,7 @@ public class CatalogLookupDataService<TLookupData, TReponse>
         }
         else if (typeof(TLookupData) == typeof(CatalogType))
         {
-            url = $"{_baseUrl}/catalogbrands";
+            url = $"{_baseUrl}/catalogtypes";
         }
         else
         {
