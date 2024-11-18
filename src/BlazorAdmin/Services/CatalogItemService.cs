@@ -69,33 +69,72 @@ public class CatalogItemService : ICatalogItemService
         return createdItem;
     }
 
-    //TODO: Implementer Edit metoden
     public async Task<CatalogItem> Edit(CatalogItem catalogItem)
     {
-        return (await _httpService.HttpPut<EditCatalogItemResult>("catalog-items", catalogItem)).CatalogItem;
+        var jsonContent = new StringContent(
+            JsonSerializer.Serialize(catalogItem),
+            Encoding.UTF8,
+            "application/json");
+
+        // Opret base url variabel med baseUrl og catalog item id appended
+        // Prøvede at gøre det rent igennem body, men ID blev lavet om til 0
+        // af en eller anden grund
+        var url = $"{_baseUrl}/{catalogItem.Id}";
+
+        var response = await _httpClient.PutAsync(url, jsonContent);
+
+        // Tjekker om response indeholder noContent (success)
+        if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+        {
+            return catalogItem;
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var updatedItem = JsonSerializer.Deserialize<CatalogItem>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        return updatedItem;
     }
 
-    //TODO: Implementer Delete metoden
     public async Task<string> Delete(int catalogItemId)
     {
-        return (await _httpService.HttpDelete<DeleteCatalogItemResponse>("catalog-items", catalogItemId)).Status;
+        // Sender delete request til _baseUrl med catalog item id appended
+        var response = await _httpClient.DeleteAsync($"{_baseUrl}/{catalogItemId}");
+        response.EnsureSuccessStatusCode();
+
+        // Returner status på response
+        var responseContent = await response.Content.ReadAsStringAsync();
+        return responseContent;
     }
 
-    //TODO: Implementer GetById metoden
     public async Task<CatalogItem> GetById(int id)
     {
+        // Hent CatalogItem fra CatalogService
+        var response = await _httpClient.GetAsync($"{_baseUrl}/{id}");
+        response.EnsureSuccessStatusCode();
+
+        // Deserialize til et CatalogItem objekt
+        var responseContent = await response.Content.ReadAsStringAsync();
+        var catalogItem = JsonSerializer.Deserialize<CatalogItem>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        // Hent brands og types via brand og type service
         var brandListTask = _brandService.List();
         var typeListTask = _typeService.List();
-        var itemGetTask = _httpService.HttpGet<EditCatalogItemResult>($"catalog-items/{id}");
-        await Task.WhenAll(brandListTask, typeListTask, itemGetTask);
+        await Task.WhenAll(brandListTask, typeListTask);
+
+        // Map brand og type navne til CatalogItem, da de i frontenden forventes
+        // at være strings, og ikke hele objekter, som de er i vores CatalogService Microservice
         var brands = brandListTask.Result;
         var types = typeListTask.Result;
-        var catalogItem = itemGetTask.Result.CatalogItem;
         catalogItem.CatalogBrand = brands.FirstOrDefault(b => b.Id == catalogItem.CatalogBrandId)?.Name;
         catalogItem.CatalogType = types.FirstOrDefault(t => t.Id == catalogItem.CatalogTypeId)?.Name;
+
         return catalogItem;
     }
 
+
+    // Hent en liste af catalog items (paged)
     public async Task<List<CatalogItem>> ListPaged(int pageSize)
     {
         // Sender get request med httpclient
@@ -111,16 +150,16 @@ public class CatalogItemService : ICatalogItemService
         return items;
     }
 
+    // Hent en liste af ALLE catalog items
     public async Task<List<CatalogItem>> List()
     {
-        // Send get request med httpclient
-        var response = await _httpClient.GetAsync(_baseUrl);
+        // Send get request for at hente alle items
+        var response = await _httpClient.GetAsync($"{_baseUrl}");
         response.EnsureSuccessStatusCode();
 
-        // Deserialize til et PagedCatalogItemResponse objekt
+        // Deserialize the response into a list of CatalogItems
         var responseContent = await response.Content.ReadAsStringAsync();
-        var pagedResponse = JsonSerializer.Deserialize<PagedCatalogItemResponse>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        var items = pagedResponse.CatalogItems;
+        var items = JsonSerializer.Deserialize<List<CatalogItem>>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         return items;
     }
