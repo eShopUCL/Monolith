@@ -36,3 +36,10 @@ spec:
             name: api-gateway-service
             port:
               number: 80
+      - path: /catalog-sqlserver
+        pathType: Prefix
+        backend:
+          service:
+            name: catalog-sqlserver-service
+            port:
+              number: 1433
