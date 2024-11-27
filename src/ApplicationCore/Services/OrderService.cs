@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
@@ -6,6 +7,8 @@ using Microsoft.eShopWeb.ApplicationCore.Entities.BasketAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.ApplicationCore.Specifications;
+using Microsoft.eShopWeb.PublicApi.Messaging;
+using Microsoft.eShopWeb.PublicApi.Messaging.Messages;
 
 namespace Microsoft.eShopWeb.ApplicationCore.Services;
 
@@ -15,11 +18,13 @@ public class OrderService : IOrderService
     private readonly IUriComposer _uriComposer;
     private readonly IRepository<Basket> _basketRepository;
     private readonly IRepository<CatalogItem> _itemRepository;
+    private readonly CatalogRequestProducer _catalogRequestProducer;
 
     public OrderService(IRepository<Basket> basketRepository,
         IRepository<CatalogItem> itemRepository,
         IRepository<Order> orderRepository,
-        IUriComposer uriComposer)
+        IUriComposer uriComposer,
+        CatalogRequestProducer catalogRequestProducer)
     {
         _orderRepository = orderRepository;
         _uriComposer = uriComposer;
@@ -35,9 +40,14 @@ public class OrderService : IOrderService
         Guard.Against.Null(basket, nameof(basket));
         Guard.Against.EmptyBasketOnCheckout(basket.Items);
 
-        var catalogItemsSpecification = new CatalogItemsSpecification(basket.Items.Select(item => item.CatalogItemId).ToArray());
-        var catalogItems = await _itemRepository.ListAsync(catalogItemsSpecification);
+        var catalogRequest = new CatalogRequest
+        {
+            CatalogItemIds = basket.Items.Select(item => item.CatalogItemId).ToArray()
+        };
 
+        //RabbitMq producer til at indhente
+         var catalogItems = await _catalogRequestProducer.GetCatalogItemsAsync(catalogRequest);
+       
         var items = basket.Items.Select(basketItem =>
         {
             var catalogItem = catalogItems.First(c => c.Id == basketItem.CatalogItemId);
