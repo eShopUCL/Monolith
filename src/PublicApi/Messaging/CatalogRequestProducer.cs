@@ -1,19 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore.Metadata;
-using RabbitMQ.Client;
+﻿using RabbitMQ.Client;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using System;
 using Microsoft.eShopWeb.PublicApi.Messaging.Messages;
 using System.Text.Json;
+using RabbitMQ.Client.Events;
 
 namespace Microsoft.eShopWeb.PublicApi.Messaging
 {
     public class CatalogRequestProducer
     {
-        private readonly IModel _channel;
+        private readonly RabbitMQ.Client.IModel _channel;
 
-        public CatalogRequestProducer(IModel channel)
+        public CatalogRequestProducer(RabbitMQ.Client.IModel channel)
         {
             _channel = channel;
         }
