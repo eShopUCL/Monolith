@@ -1,11 +1,16 @@
 apiVersion: apps/v1
-kind: Deployment
+# 1. StatefulSet is used to manage stateful applications, that is, applications that require persistent storage.
+  # It replaces the Deployment. It will also ensure predictable names for the pods.
+kind: StatefulSet
 metadata:
   name: sqlserver
   labels:
     app: sqlserver
 spec:
-  replicas: 1
+  # Number of replicas is set to 3, due to the high availability requirements of the SQL Server.
+  replicas: 3
+  # Headless service is required for the StatefulSet communication. Its for pod to pod communication.
+  serviceName: sqlserver-headless
   selector:
     matchLabels:
       app: sqlserver
@@ -29,22 +34,43 @@ spec:
           mountPath: /var/opt/mssql
         securityContext:
           runAsUser: 0  # Run as root user to bypass security restrictions
-      volumes:
-      - name: sqlstorage
-        persistentVolumeClaim:
-          claimName: sqlserver-pvc
+        # readinessProbe is used to check if the container is ready to accept traffic.
+          # it works by executing a command inside the container and checking the exit code.
+          # If the exit code is 0, the container is ready.
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "echo SELECT 1 | /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P @someThingComplicated1234"
+          initialDelaySeconds: 10
+          periodSeconds: 15
+  # VolumeClaimTemplates is used to create a PersistentVolumeClaim for each pod.
+  # Each pod gets its own persistent volume, for isolated data storage. (e.g., sqlstorage-0, sqlstorage-1).
+  volumeClaimTemplates:
+  - metadata:
+      name: sqlstorage
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 3Gi  
 ---
+# 2. Headless Service for StatefulSet communication.
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: sqlserver-pvc
+  name: sqlserver-headless
 spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+  clusterIP: None  # Headless service enables direct pod-to-pod communication.
+  selector:
+    app: sqlserver
+  ports:
+  - port: 1433
+    targetPort: 1433
 ---
+# 3. Standard LoadBalancer Service for external access to SQL Server.
 apiVersion: v1
 kind: Service
 metadata:
@@ -52,7 +78,7 @@ metadata:
   labels:
     app: sqlserver
 spec:
-  type: LoadBalancer
+  type: LoadBalancer  # Allows external access to the SQL Server primary replica.
   ports:
     - port: 1433
       targetPort: 1433
